@@ -2,6 +2,9 @@ import { getTocs } from '../core/parser';
 import { epubUnzip } from '../core/packer';
 import { RawTextStream, RawTextPosition } from './stream';
 import chalk from 'chalk';
+import { ReaderConfig } from './config';
+
+const config = new ReaderConfig();
 
 export class TerminalReader {
   // Current file
@@ -24,7 +27,7 @@ export class TerminalReader {
     };
     this.OSStream.input.setRawMode(true);
     this.stream = new RawTextStream(position, size);
-    this.prefix = '❯ ';
+    this.prefix = config.prefix;
     this.hide = false;
   }
 
@@ -33,15 +36,15 @@ export class TerminalReader {
     // listen to stdin
     this.OSStream.input.on('data', async (keys: Buffer) => {
       keys.forEach(async (key: any) => {
-        if (key === 106) {
+        if (key === config.keyMap.next) {
           await this.next();
-        } else if (key === 107) {
+        } else if (key === config.keyMap.prev) {
           await this.prev();
-        } else if (key === 3) {
+        } else if (key === config.keyMap.next) {
           process.exit(0);
-        } else if (key === 32) {
+        } else if (key === config.keyMap.toggleHide) {
           this.toggleHide();
-        } else if (key === 127) {
+        } else if (key === config.keyMap.delete) {
           this.OSStream.output.write('\x1b[2K');
           this.OSStream.output.write('\r');
         } else {
