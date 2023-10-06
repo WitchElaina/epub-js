@@ -3,6 +3,7 @@ import { epubUnzip } from '../core/packer';
 import { RawTextStream, RawTextPosition } from './stream';
 import chalk from 'chalk';
 import { ReaderConfig } from './config';
+import { BookmarkManager } from './bookmark';
 
 const config = new ReaderConfig();
 export class TerminalReader {
@@ -44,6 +45,16 @@ export class TerminalReader {
         } else if (key === config.keyMap.prev) {
           await this.prev();
         } else if (key === config.keyMap.exit) {
+          // clear screen
+          this.OSStream.output.write('\x1b[2J');
+          // move cursor to top
+          this.OSStream.output.write('\x1b[0f');
+          // save bookmark
+          const bookmarkManager = new BookmarkManager();
+          await bookmarkManager.readLocalBookmarks();
+          bookmarkManager.addBookmark(this.epubFile, this.stream.position);
+          await bookmarkManager.saveLocalBookmarks();
+          // exit
           process.exit(0);
         } else if (key === config.keyMap.toggleHide) {
           this.toggleHide();
@@ -65,8 +76,13 @@ export class TerminalReader {
     const epubDir = await epubUnzip(this.epubFile);
     this.toc = await getAllTocs(epubDir);
 
+    // if bookmark exists, load it
+    const bookmarkManager = new BookmarkManager();
+    await bookmarkManager.readLocalBookmarks();
+    const bookmark = bookmarkManager.getBookmark(this.epubFile);
+
     // set initial stream
-    this.stream = new RawTextStream(this.toc, 40);
+    this.stream = new RawTextStream(this.toc, 40, bookmark);
 
     // print first page
     this.output(await this.stream.getText());
@@ -80,9 +96,7 @@ export class TerminalReader {
       .then((next) => {
         this.output(next);
       })
-      .catch((err) => {
-        console.log(err);
-      });
+      .catch((err) => {});
   }
 
   async prev() {
@@ -92,9 +106,7 @@ export class TerminalReader {
       .then((prev) => {
         this.output(prev);
       })
-      .catch((err) => {
-        console.log(err);
-      });
+      .catch((err) => {});
   }
 
   async toggleHide() {
@@ -103,10 +115,16 @@ export class TerminalReader {
   }
 
   output(text: string) {
-    // clear last line
-    this.OSStream.output.write('\x1b[2K');
-    // move cursor to start of line
-    this.OSStream.output.write('\r');
+    // clear screen
+    this.OSStream.output.write('\x1b[2J');
+    // move cursor to top
+    this.OSStream.output.write('\x1b[0f');
+    // menu
+    this.OSStream.output.write(
+      chalk.bold.green(
+        `Ch ${this.stream.position.tocIndex} / ${this.stream.tocs.length}  Pos ${this.stream.position.startIndex} , ${this.stream.position.endIndex}   El ${this.stream.position.elementIndex} / ${this.stream.cache.content.length}\n`,
+      ),
+    );
     // print prefix
     this.OSStream.output.write(chalk.bold.blue(this.prefix));
     // print text

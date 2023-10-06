@@ -102,7 +102,7 @@ function flattenXML2JsNode(node: XML2JsNode, result: string[]) {
   }
 }
 
-export async function getRawChapterByToc(toc: Toc) {
+export async function getRawChapter(toc: Toc) {
   // create special parser for chapter
   const parser = new Parser({
     ignoreAttrs: true,

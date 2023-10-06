@@ -1,4 +1,4 @@
-import { RawCapter, Toc, getRawChapterByToc } from '../core/parser';
+import { RawCapter, Toc, getRawChapter } from '../core/parser';
 import { SystemError } from 'bun';
 
 export enum ScrollDirection {
@@ -35,13 +35,18 @@ export class RawTextStream {
   // All files in toc array
   tocs: Toc[];
 
-  constructor(tocs: Toc[], size: number) {
-    this.position = {
-      tocIndex: -1,
-      elementIndex: 0,
-      startIndex: 0,
-      endIndex: size,
-    };
+  constructor(tocs: Toc[], size: number, bookmark?: RawTextPosition) {
+    this.position = bookmark
+      ? {
+          ...bookmark,
+          tocIndex: bookmark.tocIndex - 1,
+        }
+      : {
+          tocIndex: -1,
+          elementIndex: 0,
+          startIndex: 0,
+          endIndex: size,
+        };
     // set size to terminal width
     this.size = size;
     // set cache to empty
@@ -57,7 +62,7 @@ export class RawTextStream {
     // if cache is empty, load file
     while (this.cache.content.length === 0) {
       this.position.tocIndex += 1;
-      this.cache = await getRawChapterByToc(this.tocs[this.position.tocIndex]);
+      this.cache = await getRawChapter(this.tocs[this.position.tocIndex]);
     }
     return this.cache.content?.[this.position.elementIndex]?.slice(
       this.position.startIndex,
@@ -69,22 +74,16 @@ export class RawTextStream {
     const newStart = this.position.endIndex;
     if (newStart > this.cache.content[this.position.elementIndex].length) {
       const newIndex = this.position.elementIndex + 1;
-      if (newIndex in this.cache.content) {
+      if (newIndex < this.cache.content.length) {
         this.position.elementIndex = newIndex;
         this.position.startIndex = 0;
         this.position.endIndex = this.size;
       } else {
-        // current file done
-        if (++this.position.tocIndex >= this.tocs.length) {
-          // already at the end of the book
-          throw new OutOfIndexError(ScrollDirection.Down);
-        } else {
-          await getRawChapterByToc(this.tocs[this.position.tocIndex]).then((cache) => {
-            this.cache = cache;
-            this.position.elementIndex = 0;
-            this.position.startIndex = 0;
-            this.position.endIndex = this.size;
-          });
+        try {
+          await this.nextElement();
+        } catch (e) {
+        } finally {
+          return this.getText();
         }
       }
     } else {
@@ -94,26 +93,32 @@ export class RawTextStream {
     return this.getText();
   }
 
+  async nextElement() {
+    // current file done
+    if (this.position.tocIndex + 1 < this.tocs.length) {
+      await getRawChapter(this.tocs[++this.position.tocIndex]).then((cache) => {
+        this.cache = cache;
+        this.position.elementIndex = 0;
+        this.position.startIndex = 0;
+        this.position.endIndex = this.size;
+      });
+    }
+  }
+
   async prev() {
     const newEnd = this.position.startIndex;
     if (newEnd <= 0) {
       const newIndex = this.position.elementIndex - 1;
-      if (newIndex in this.cache.content) {
+      if (newIndex >= 0) {
         this.position.elementIndex = newIndex;
         this.position.startIndex = 0;
         this.position.endIndex = this.size;
       } else {
-        // current file done
-        if (--this.position.tocIndex < 0) {
-          // already at the start of the book
-          throw new OutOfIndexError(ScrollDirection.Up);
-        } else {
-          await getRawChapterByToc(this.tocs[this.position.tocIndex]).then((cache) => {
-            this.cache = cache;
-            this.position.elementIndex = this.cache.content.length - 1;
-            this.position.endIndex = this.cache.content[this.position.elementIndex].length;
-            this.position.startIndex = this.position.endIndex - this.size;
-          });
+        try {
+          await this.prevElement();
+        } catch (e) {
+        } finally {
+          return this.getText();
         }
       }
     } else {
@@ -121,5 +126,15 @@ export class RawTextStream {
       this.position.endIndex = newEnd;
     }
     return this.getText();
+  }
+
+  async prevElement() {
+    if (this.position.tocIndex - 1 >= 0)
+      await getRawChapter(this.tocs[--this.position.tocIndex]).then((cache) => {
+        this.cache = cache;
+        this.position.elementIndex = this.cache.content.length - 1;
+        this.position.endIndex = this.cache.content[this.position.elementIndex].length;
+        this.position.startIndex = this.position.endIndex - this.size;
+      });
   }
 }
