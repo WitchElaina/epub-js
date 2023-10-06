@@ -27,8 +27,8 @@ export async function getMetadata(epubDir: string) {
 
 export interface Toc {
   id: string;
-  order: string;
-  label: string;
+  order?: string;
+  label?: string;
   src: string;
 }
 
@@ -52,9 +52,54 @@ export async function getTocs(epubDir: string): Promise<Toc[]> {
   return tocObj;
 }
 
+export async function getAllTocs(epubDir: string) {
+  // get full path of root file
+  const rootFilePath = await getRootFile(epubDir);
+  const contentPath = path.join(epubDir, path.dirname(rootFilePath), 'content.opf');
+
+  // read content file
+  const contentXml = await fs.readFile(contentPath, 'utf8');
+  const content = await parser.parseStringPromise(contentXml);
+
+  // get all toc files
+  const manifest = content.package.manifest[0].item;
+  const spine = content.package.spine[0].itemref;
+
+  const tocPaths: Toc[] = [];
+
+  spine.forEach((item: any) => {
+    const id = item.$.idref;
+    const tocItem = manifest.find((item: any) => item.$.id === id);
+    if (tocItem) {
+      tocPaths.push({
+        id: tocItem.$.id,
+        src: path.join(epubDir, path.dirname(rootFilePath), tocItem.$.href),
+      });
+    }
+  });
+
+  return tocPaths;
+}
+
 export interface RawCapter {
   title: string;
   content: string[];
+}
+
+interface XML2JsNode {
+  _?: string;
+  $$?: XML2JsNode[];
+}
+
+function flattenXML2JsNode(node: XML2JsNode, result: string[]) {
+  if (node._) {
+    result.push(node._);
+  }
+  if (node.$$) {
+    node.$$.forEach((item) => {
+      flattenXML2JsNode(item, result);
+    });
+  }
 }
 
 export async function getRawChapterByToc(toc: Toc) {
@@ -65,16 +110,15 @@ export async function getRawChapterByToc(toc: Toc) {
     explicitChildren: true,
     preserveChildrenOrder: true,
   });
-
   // read chapter file
   const xml = await fs.readFile(toc.src, 'utf8');
   const result = await parser.parseStringPromise(xml);
 
   // get content
   const content: string[] = [];
-  result.html.body[0]['$$'].forEach((item: any) => {
-    item?._ && content.push(item._);
-  });
+
+  // flatten result
+  flattenXML2JsNode(result.html.body[0], content);
 
   return {
     title: result.html.head[0].title[0],

@@ -1,14 +1,17 @@
-import { getTocs } from '../core/parser';
+import { Toc, getAllTocs } from '../core/parser';
 import { epubUnzip } from '../core/packer';
 import { RawTextStream, RawTextPosition } from './stream';
 import chalk from 'chalk';
 import { ReaderConfig } from './config';
 
 const config = new ReaderConfig();
-
 export class TerminalReader {
+  // Opened epub file name
+  epubFile: string;
+  // All files in toc array
+  toc: Toc[];
   // Current file
-  position: RawTextPosition;
+  tocIndex: number;
   // Text stream
   stream: RawTextStream;
   // Stream interface
@@ -19,20 +22,20 @@ export class TerminalReader {
   prefix: string;
   hide: boolean;
 
-  constructor(position: RawTextPosition, size: number) {
-    this.position = position;
-    this.OSStream = {
-      input: process.stdin,
-      output: process.stdout,
-    };
-    this.OSStream.input.setRawMode(true);
-    this.stream = new RawTextStream(position, size);
+  constructor(
+    epubFile: string,
+    OSStream: { input: NodeJS.ReadStream; output: NodeJS.WriteStream },
+  ) {
+    this.OSStream = OSStream;
     this.prefix = config.prefix;
     this.hide = false;
+    this.epubFile = epubFile;
+    this.toc = [];
+    this.tocIndex = 0;
   }
 
-  async start() {
-    this.output(await this.stream.getText());
+  keybind() {
+    this.OSStream.input.setRawMode(true);
     // listen to stdin
     this.OSStream.input.on('data', async (keys: Buffer) => {
       keys.forEach(async (key: any) => {
@@ -40,7 +43,7 @@ export class TerminalReader {
           await this.next();
         } else if (key === config.keyMap.prev) {
           await this.prev();
-        } else if (key === config.keyMap.next) {
+        } else if (key === config.keyMap.exit) {
           process.exit(0);
         } else if (key === config.keyMap.toggleHide) {
           this.toggleHide();
@@ -57,16 +60,41 @@ export class TerminalReader {
     });
   }
 
+  async start() {
+    // get toc
+    const epubDir = await epubUnzip(this.epubFile);
+    this.toc = await getAllTocs(epubDir);
+
+    // set initial stream
+    this.stream = new RawTextStream(this.toc, 40);
+
+    // print first page
+    this.output(await this.stream.getText());
+    this.keybind();
+  }
+
   async next() {
     // print next page
-    const next = await this.stream.next();
-    this.output(next);
+    await this.stream
+      .next()
+      .then((next) => {
+        this.output(next);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   async prev() {
     // print previous page
-    const prev = await this.stream.prev();
-    this.output(prev);
+    await this.stream
+      .prev()
+      .then((prev) => {
+        this.output(prev);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   }
 
   async toggleHide() {
@@ -88,20 +116,8 @@ export class TerminalReader {
 
 // read file from params
 const epubFilePath = process.argv[2];
-const epubTocIndex = (process.argv[3] as unknown as number) || 0;
-const epubDir = await epubUnzip(epubFilePath);
 
-const toc = await getTocs(epubDir);
-
-const initSize = (process.stdout.columns - 4) / 2;
-const reader = new TerminalReader(
-  {
-    toc: toc[epubTocIndex],
-    elementIndex: 0,
-    startIndex: 0,
-    endIndex: initSize,
-  },
-  initSize,
-);
-
-reader.start();
+new TerminalReader(epubFilePath, {
+  input: process.stdin,
+  output: process.stdout,
+}).start();
