@@ -44,6 +44,10 @@ export class TerminalReader {
           await this.next();
         } else if (key === config.keyMap.prev) {
           await this.prev();
+        } else if (key === config.keyMap.nextChapter) {
+          await this.nextChapter();
+        } else if (key === config.keyMap.prevChapter) {
+          await this.prevChapter();
         } else if (key === config.keyMap.exit) {
           // clear screen
           this.OSStream.output.write('\x1b[2J');
@@ -107,6 +111,16 @@ export class TerminalReader {
         this.output(prev);
       })
       .catch((err) => {});
+  }
+
+  async nextChapter() {
+    await this.stream.nextElement();
+    this.output(await this.stream.getText());
+  }
+
+  async prevChapter() {
+    await this.stream.prevElement();
+    this.output(await this.stream.getText());
   }
 
   async toggleHide() {

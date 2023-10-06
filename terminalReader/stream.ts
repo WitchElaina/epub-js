@@ -64,6 +64,9 @@ export class RawTextStream {
       this.position.tocIndex += 1;
       this.cache = await getRawChapter(this.tocs[this.position.tocIndex]);
     }
+    if (this.cache.content.length === 0) {
+      return 'NONE TEXT IN THIS CHAPTER';
+    }
     return this.cache.content?.[this.position.elementIndex]?.slice(
       this.position.startIndex,
       this.position.endIndex,
@@ -97,6 +100,9 @@ export class RawTextStream {
     // current file done
     if (this.position.tocIndex + 1 < this.tocs.length) {
       await getRawChapter(this.tocs[++this.position.tocIndex]).then((cache) => {
+        if (cache.content.length === 0) {
+          return;
+        }
         this.cache = cache;
         this.position.elementIndex = 0;
         this.position.startIndex = 0;
@@ -131,6 +137,9 @@ export class RawTextStream {
   async prevElement() {
     if (this.position.tocIndex - 1 >= 0)
       await getRawChapter(this.tocs[--this.position.tocIndex]).then((cache) => {
+        if (cache.content.length === 0) {
+          return;
+        }
         this.cache = cache;
         this.position.elementIndex = this.cache.content.length - 1;
         this.position.endIndex = this.cache.content[this.position.elementIndex].length;

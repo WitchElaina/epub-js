@@ -4,10 +4,11 @@ Read EPub books in your terminal.
 
 ## Usage
 
-| Operation   | Default Key |
-| ----------- | ----------- |
-| Next Page   | `k`         |
-| Prev Page   | `j`         |
-| Boss Key    | `space`     |
-| Toggle Menu | `m`         |
-| Toggle Toc  | `t`         |
+| Operation     | Default Key  |
+| ------------- | ------------ |
+| Next Page     | `j`          |
+| Prev Page     | `k`          |
+| Next Chapter  | `l`          |
+| Prev Chapter  | `h`          |
+| Boss Key      | `Space`      |
+| Save and Quit | `Ctrl` + `C` |

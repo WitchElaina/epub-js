@@ -111,7 +111,7 @@ export async function getRawChapter(toc: Toc) {
     preserveChildrenOrder: true,
   });
   // read chapter file
-  const xml = await fs.readFile(toc.src, 'utf8');
+  const xml = await fs.readFile(toc?.src, 'utf8');
   const result = await parser.parseStringPromise(xml);
 
   // get content
