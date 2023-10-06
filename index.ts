@@ -1,1 +1,1 @@
-import { getMetadata, getTocs, getRawChapterByToc } from './parser';
+import { getMetadata, getTocs, getRawChapterByToc } from './core/parser';
