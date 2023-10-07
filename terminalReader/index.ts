@@ -142,7 +142,7 @@ export class TerminalReader {
     // print prefix
     this.OSStream.output.write(chalk.bold.blue(this.prefix));
     // print text
-    this.OSStream.output.write(chalk.bold.gray.dim(text));
+    this.OSStream.output.write(chalk.bold.gray(text));
   }
 }
 
