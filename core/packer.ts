@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import { promises as fs } from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import os from 'os';
 
 const TEMP_DIR = path.join(os.tmpdir(), 'epub_temp_folder');
@@ -30,8 +31,8 @@ export async function epubUnzip(epubFilePath: string): Promise<string> {
  * @param dirPath Directory to scan
  * @returns Array of epub file paths
  */
-export async function scanDir(dirPath: string): Promise<string[]> {
-  const epubFiles: string[] = [];
+export async function scanDir(dirPath: string): Promise<any[]> {
+  const epubFiles = [];
   dirPath = path.resolve(dirPath);
   console.log(`Scan dir: ${dirPath}`);
   const files = await fs.readdir(dirPath);
@@ -42,7 +43,14 @@ export async function scanDir(dirPath: string): Promise<string[]> {
       await scanDir(filePath);
     } else if (stat.isFile()) {
       if (path.extname(filePath) === '.epub') {
-        epubFiles.push(filePath);
+        const fileContent = await fs.readFile(filePath);
+        // cal eTag using md5 (AWS S3 uses this algorithm)
+        const eTag = crypto.createHash('md5').update(fileContent).digest('hex');
+        epubFiles.push({
+          name: path.basename(filePath),
+          path: filePath,
+          eTag,
+        });
       }
     }
   }

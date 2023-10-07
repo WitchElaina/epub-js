@@ -103,6 +103,13 @@ function flattenXML2JsNode(node: XML2JsNode, result: string[]) {
 }
 
 export async function getRawChapter(toc: Toc) {
+  // check if toc file exists
+  if (!toc) {
+    return {
+      title: '',
+      content: [],
+    }
+  }
   // create special parser for chapter
   const parser = new Parser({
     ignoreAttrs: true,
