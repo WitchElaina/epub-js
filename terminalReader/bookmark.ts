@@ -1,17 +1,26 @@
-import { RawTextPosition } from './stream';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
 
+export interface Bookmark {
+  tocIndex: number;
+  elementIndex: number;
+  startIndex: number;
+}
+
 export class BookmarkManager {
-  bookmarks: Map<string, RawTextPosition>;
+  bookmarks: Map<string, Bookmark>;
 
   constructor() {
     this.bookmarks = new Map();
   }
 
-  addBookmark(epubFile: string, position: RawTextPosition) {
-    this.bookmarks.set(path.basename(epubFile), position);
+  addBookmark(epubFile: string, position: Bookmark) {
+    this.bookmarks.set(path.basename(epubFile), {
+      tocIndex: position.tocIndex,
+      elementIndex: position.elementIndex,
+      startIndex: position.startIndex,
+    });
   }
 
   removeBookmark(epubFile: string) {

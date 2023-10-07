@@ -1,5 +1,5 @@
 import { RawCapter, Toc, getRawChapter } from '../core/parser';
-import { SystemError } from 'bun';
+import { Bookmark } from './bookmark';
 
 export enum ScrollDirection {
   Up,
@@ -35,10 +35,11 @@ export class RawTextStream {
   // All files in toc array
   tocs: Toc[];
 
-  constructor(tocs: Toc[], size: number, bookmark?: RawTextPosition) {
+  constructor(tocs: Toc[], size: number, bookmark?: Bookmark) {
     this.position = bookmark
       ? {
           ...bookmark,
+          endIndex: size + bookmark.startIndex,
           tocIndex: bookmark.tocIndex,
         }
       : {

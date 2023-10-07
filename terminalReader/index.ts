@@ -1,6 +1,6 @@
 import { Toc, getAllTocs } from '../core/parser';
 import { epubUnzip } from '../core/packer';
-import { RawTextStream, RawTextPosition } from './stream';
+import { RawTextStream } from './stream';
 import chalk from 'chalk';
 import { ReaderConfig } from './config';
 import { BookmarkManager } from './bookmark';
