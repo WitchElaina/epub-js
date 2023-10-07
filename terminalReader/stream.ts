@@ -39,10 +39,10 @@ export class RawTextStream {
     this.position = bookmark
       ? {
           ...bookmark,
-          tocIndex: bookmark.tocIndex - 1,
+          tocIndex: bookmark.tocIndex,
         }
       : {
-          tocIndex: -1,
+          tocIndex: 0,
           elementIndex: 0,
           startIndex: 0,
           endIndex: size,
@@ -59,11 +59,7 @@ export class RawTextStream {
 
   // Get current text
   async getText() {
-    // if cache is empty, load file
-    while (this.cache.content.length === 0) {
-      this.position.tocIndex += 1;
-      this.cache = await getRawChapter(this.tocs[this.position.tocIndex]);
-    }
+    this.cache = await getRawChapter(this.tocs[this.position.tocIndex]);
     if (this.cache.content.length === 0) {
       return 'NONE TEXT IN THIS CHAPTER';
     }
